@@ -1,12 +1,12 @@
 import re
 
-# Read FAQ data
+# Read FAQ file
 with open("faq.md", "r", encoding="utf-8") as file:
     faq_text = file.read()
 
-# Convert FAQ markdown into question-answer pairs
 faq_items = []
 
+# Extract FAQ sections
 sections = re.split(r"\n(?=## )", faq_text)
 
 for section in sections:
@@ -33,16 +33,27 @@ for section in sections:
 
 def find_answer(user_question):
     user_words = set(
-        re.findall(r"\b[a-zA-Z0-9]+\b", user_question.lower())
+        re.findall(r"\b[a-zA-Z]+\b", user_question.lower())
     )
 
     best_match = None
     best_score = 0
 
+    # Words that are common in many questions
+    stop_words = {
+        "what", "is", "the", "a", "an", "are",
+        "how", "can", "do", "does", "about",
+        "college", "student"
+    }
+
+    user_words = user_words - stop_words
+
     for item in faq_items:
         faq_words = set(
-            re.findall(r"\b[a-zA-Z0-9]+\b", item["question"].lower())
+            re.findall(r"\b[a-zA-Z]+\b", item["question"].lower())
         )
+
+        faq_words = faq_words - stop_words
 
         common_words = user_words.intersection(faq_words)
         score = len(common_words)
@@ -51,10 +62,11 @@ def find_answer(user_question):
             best_score = score
             best_match = item
 
+    # Require a meaningful match
     if best_match and best_score >= 1:
         return best_match["answer"]
 
-    return "Sorry, I could not find an answer to that question in the FAQ."
+    return "Sorry, I could not find an answer to that question in the College FAQ."
 
 
 print("College Student Grounded FAQ Chatbot")
