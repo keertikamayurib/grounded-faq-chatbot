@@ -1,4 +1,7 @@
 import re
+from flask import Flask, render_template, request, jsonify
+
+app = Flask(__name__)
 
 # Read FAQ file
 with open("faq.md", "r", encoding="utf-8") as file:
@@ -32,14 +35,11 @@ for section in sections:
 
 
 def find_answer(user_question):
+
     user_words = set(
         re.findall(r"\b[a-zA-Z]+\b", user_question.lower())
     )
 
-    best_match = None
-    best_score = 0
-
-    # Words that are common in many questions
     stop_words = {
         "what", "is", "the", "a", "an", "are",
         "how", "can", "do", "does", "about",
@@ -48,7 +48,11 @@ def find_answer(user_question):
 
     user_words = user_words - stop_words
 
+    best_match = None
+    best_score = 0
+
     for item in faq_items:
+
         faq_words = set(
             re.findall(r"\b[a-zA-Z]+\b", item["question"].lower())
         )
@@ -56,29 +60,37 @@ def find_answer(user_question):
         faq_words = faq_words - stop_words
 
         common_words = user_words.intersection(faq_words)
+
         score = len(common_words)
 
         if score > best_score:
             best_score = score
             best_match = item
 
-    # Require a meaningful match
     if best_match and best_score >= 1:
         return best_match["answer"]
 
     return "Sorry, I could not find an answer to that question in the College FAQ."
 
 
-print("College Student Grounded FAQ Chatbot")
-print("Type 'exit' to stop.")
+@app.route("/")
+def home():
+    return render_template("index.html")
 
-while True:
-    user_question = input("\nYou: ")
 
-    if user_question.lower() == "exit":
-        print("Chatbot stopped.")
-        break
+@app.route("/ask", methods=["POST"])
+def ask():
 
-    answer = find_answer(user_question)
+    data = request.get_json()
 
-    print("Bot:", answer)
+    question = data.get("question", "")
+
+    answer = find_answer(question)
+
+    return jsonify({
+        "answer": answer
+    })
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)
